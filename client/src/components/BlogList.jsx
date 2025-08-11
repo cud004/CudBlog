@@ -3,11 +3,20 @@ import { blog_data, blogCategories } from '../assets/assets'
 // eslint-disable-next-line no-unused-vars
 import {motion} from "motion/react"
 import BlogCard from './BlogCard';
+import { useAppContext } from '../context/AppContext';
 
 const BlogList = () => {
 
 
     const [menu, setMenu] = useState("Tất cả");
+    const {blog, input} = useAppContext();
+
+    const filteredBlogs = ()=>{
+      if(input === ''){
+        return blog;
+      }
+      return blog.filter((blog)=> blog.title.toLowerCase().includes(input.toLowerCase()) || blog.category.toLowerCase().includes(input.toLowerCase())); 
+    }
 
 
   return (
@@ -31,7 +40,7 @@ const BlogList = () => {
         ))}
       </div>
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8 mb-24 mx-8 sm:mx-16 xl:mx-40'>
-       {blog_data.filter((blog)=> menu ==="Tất cả" ?
+       {filteredBlogs().filter((blog)=> menu ==="Tất cả" ?
         true: blog.category === menu).map((blog)=> <BlogCard key={blog._id} blog={blog}/>)}
       </div>
     </div>

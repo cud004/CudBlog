@@ -1,10 +1,9 @@
 import React from 'react'
 import { assets } from '../assets/assets'
-import { useNavigate } from 'react-router-dom'
+import { useAppContext } from '../context/AppContext';
 const Navbar = () => {
 
-    const navigate = useNavigate();
-
+    const {navigate, token} = useAppContext();
 
 
   return (
@@ -13,8 +12,8 @@ const Navbar = () => {
         <img src="/favicon.png" alt="logo" className='w-10 h-10 mr-2' />
         <span className='text-xl font-bold'>CudBlog</span>
       </div>
-      <button onClick={() => navigate('/login')} className='flex items-center gap-2 rounded-full
-    text-sm cursor-pointer bg-primary text-white px-10 py-2.5'>Đăng Nhập
+      <button onClick={() => navigate('/admin')} className='flex items-center gap-2 rounded-full
+    text-sm cursor-pointer bg-primary text-white px-10 py-2.5'>{token ? "Dashboard" : "Đăng Nhập"}
         <img src={assets.arrow} className='w-3' alt='arrow' />
       </button>
     </div>
