@@ -7,42 +7,69 @@ export const addBlog = async(req, res) => {
     try {
         const {title, subTitle, description, category, image: imageUrl, isPublished} = JSON.parse(req.body.blog);
         const imageFile = req.file;
+        const additionalImageFiles = req.files ? req.files.additionalImages : [];
 
-
-        //check if all fields are present
-        
         if(!title || !description || !category || !imageFile){
             return res.json({
                 success: false,
                 message:"Missing required fields"
             })
         }
-        const fileBuffer = fs.readFileSync(imageFile.path);
 
-        //upload image to imagekit
+        const fileBuffer = fs.readFileSync(imageFile.path);
         const response = await imageKit.upload({
             file: fileBuffer,
             fileName: imageFile.originalname,
             folder: "/blogs"
         })
-            //Optimize image
+        
         const optimizedImageUrl = imageKit.url({
             path: response.filePath,
             transformation: [
-                {quality: 'auto'}, // auto compression
-                {format:'webp'}, // Covert to modern format
-                {width: '1280'}, //width resize
-
-
+                {quality: 'auto'},
+                {format:'webp'},
+                {width: '1280'}
             ]
         });
+
+        let additionalImages = [];
+        if (additionalImageFiles && additionalImageFiles.length > 0) {
+            for (const file of additionalImageFiles) {
+                const additionalFileBuffer = fs.readFileSync(file.path);
+                const additionalResponse = await imageKit.upload({
+                    file: additionalFileBuffer,
+                    fileName: file.originalname,
+                    folder: "/blogs/additional"
+                });
+                
+                const additionalOptimizedUrl = imageKit.url({
+                    path: additionalResponse.filePath,
+                    transformation: [
+                        {quality: 'auto'},
+                        {format:'webp'},
+                        {width: '800'}
+                    ]
+                });
+                
+                additionalImages.push(additionalOptimizedUrl);
+            }
+        }
+
         const image = optimizedImageUrl;
-        await Blog.create({title, subTitle, description, category, image, isPublished})
+        await Blog.create({
+            title, 
+            subTitle, 
+            description, 
+            category, 
+            image, 
+            additionalImages,
+            isPublished
+        });
+        
         res.json({success: true, message: "Blog created successfully"})
 
     } catch (error) {
         res.json({success: false, message: error.message})
-
     }
 }
 export const getAllBlogs = async(req, res) => {
@@ -69,8 +96,7 @@ export const getBlogById = async(req, res) => {
 
 export const deleteBlogById = async(req, res) => {
     try {
-        // Get id from params or body
-      const {id} = req.body;
+        const {id} = req.body;
       await Blog.findByIdAndDelete(id);
 
       await Comment.deleteMany({blog: id});

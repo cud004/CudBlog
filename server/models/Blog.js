@@ -22,6 +22,10 @@ const blogSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    additionalImages: [{
+        type: String,
+        default: []
+    }],
     isPublished: {
         type: Boolean,
         required: true,
