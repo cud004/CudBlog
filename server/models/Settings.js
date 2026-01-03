@@ -35,20 +35,6 @@ const settingsSchema = new mongoose.Schema({
         default: true
     },
     
-    // SEO & Analytics Settings
-    enableSEO: {
-        type: Boolean,
-        default: true
-    },
-    enableAnalytics: {
-        type: Boolean,
-        default: false
-    },
-    googleAnalyticsId: {
-        type: String,
-        default: ""
-    },
-    
     // System Settings
     isMaintenanceMode: {
         type: Boolean,

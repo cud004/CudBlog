@@ -8,7 +8,7 @@ import {
     toggleMaintenanceMode
 } from "../controllers/settingsController.js";
 import { uploadProfile } from "../middleware/multer.js";
-import auth from "../middleware/auth.js";
+import { auth } from "../middleware/auth.js";
 
 const settingsRouter = express.Router();
 

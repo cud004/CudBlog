@@ -1,17 +1,61 @@
-import express from "express";
-import { addBlog, addComment, deleteBlogById, getAllBlogs, getBlogById, getBlogComments, togglePublish } from "../controllers/blogController.js";
-import { uploadMultiple } from "../middleware/multer.js";
-import auth from "../middleware/auth.js";
+import express from 'express';
+import {
+    createBlog,
+    getAllBlogs,
+    getBlogById,
+    updateBlog,
+    deleteBlog,
+    togglePublish,
+    getRelatedBlogs,
+    getPopularBlogs
+} from '../controllers/blogController.js';
+import { auth, authorize } from '../middleware/auth.js';
+import { uploadMultiple } from '../middleware/multer.js';
+import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 
 const blogRouter = express.Router();
 
+// Public routes
+blogRouter.get('/all', cacheMiddleware(600), getAllBlogs);
+blogRouter.get('/popular', cacheMiddleware(1800), getPopularBlogs);
 
-blogRouter.post("/add", uploadMultiple, auth, addBlog);
-blogRouter.get("/all", getAllBlogs);
-blogRouter.get("/:blogId", getBlogById);
-blogRouter.post("/delete", auth, deleteBlogById);
-blogRouter.post("/toggle-publish", auth, togglePublish);
-blogRouter.post("/add-comment", addComment);
-blogRouter.post("/comments", getBlogComments);
+// Protected routes (Admin/Author)
+blogRouter.post(
+    '/add',
+    auth,
+    authorize('admin', 'user'),
+    uploadMultiple,
+    invalidateCache(['cache:/api/blog*']),
+    createBlog
+);
+
+blogRouter.post(
+    '/toggle-publish/:id',
+    auth,
+    authorize('admin'),
+    invalidateCache(['cache:/api/blog*']),
+    togglePublish
+);
+
+blogRouter.put(
+    '/:id',
+    auth,
+    authorize('admin', 'user'),
+    invalidateCache(['cache:/api/blog*']),
+    updateBlog
+);
+
+blogRouter.delete(
+    '/:id',
+    auth,
+    authorize('admin'),
+    invalidateCache(['cache:/api/blog*']),
+    deleteBlog
+);
+
+// Get routes with :id - must be last
+blogRouter.get('/:id/related', cacheMiddleware(600), getRelatedBlogs);
+blogRouter.get('/:id', cacheMiddleware(600), getBlogById);
 
 export default blogRouter;
+

@@ -1,0 +1,17 @@
+
+node_modules/
+package-lock.json
+
+
+.env
+
+scripts/
+
+# Documentation files
+*.md
+!env.example
+
+uploads/
+public/uploads/
+
+

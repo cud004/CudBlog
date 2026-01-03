@@ -100,10 +100,7 @@ export const updateBlogSettings = async (req, res) => {
             blogTitle,
             blogDescription,
             allowComments,
-            moderateComments,
-            enableSEO,
-            enableAnalytics,
-            googleAnalyticsId
+            moderateComments
         } = req.body;
         
         let settings = await Settings.findOne();
@@ -115,9 +112,6 @@ export const updateBlogSettings = async (req, res) => {
         if (blogDescription !== undefined) settings.blogDescription = blogDescription;
         if (allowComments !== undefined) settings.allowComments = allowComments;
         if (moderateComments !== undefined) settings.moderateComments = moderateComments;
-        if (enableSEO !== undefined) settings.enableSEO = enableSEO;
-        if (enableAnalytics !== undefined) settings.enableAnalytics = enableAnalytics;
-        if (googleAnalyticsId !== undefined) settings.googleAnalyticsId = googleAnalyticsId;
         
         await settings.save();
         
