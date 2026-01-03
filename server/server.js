@@ -22,7 +22,7 @@ const app = express();
 // Connect to Database
 await connectDB();
 
-// Connect to Redis (optional - will continue without it if fails)
+
 await connectRedis();
 
 // Security Middleware
@@ -55,7 +55,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate Limiting
 app.use('/api', apiLimiter);
 
-// Health Check Route
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
@@ -99,7 +99,7 @@ app.use((req, res) => {
     });
 });
 
-// Global Error Handler (must be last)
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
