@@ -1,33 +1,175 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { assets } from '../../assets/assets'
+import toast from 'react-hot-toast';
+import settingsService from '../../services/settingsService';
+import commentService from '../../services/commentService';
+import { useAppContext } from '../../context/AppContext';
 
 const Setting = () => {
+  const { user, fetchUserProfile } = useAppContext();
+  
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [adminName, setAdminName] = useState('Duc Pham')
-  const [adminEmail, setAdminEmail] = useState('admin@cudblog.com')
+  const [adminName, setAdminName] = useState('')
+  const [adminEmail, setAdminEmail] = useState('')
   const [profileImage, setProfileImage] = useState(false)
-  const [blogTitle, setBlogTitle] = useState('CudBlog')
-  const [blogDescription, setBlogDescription] = useState('Blog về công nghệ và cuộc sống')
+  const [blogTitle, setBlogTitle] = useState('')
+  const [blogDescription, setBlogDescription] = useState('')
+  const [allowComments, setAllowComments] = useState(true)
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [loading, setLoading] = useState(false)
 
-  const handlePasswordChange = (e) => {
+  // Fetch user profile and settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await settingsService.getSettings();
+        if (response.success) {
+          const settings = response.data;
+          setAdminName(settings.user?.name || '');
+          setAdminEmail(settings.user?.email || '');
+          setBlogTitle(settings.blogTitle || '');
+          setBlogDescription(settings.blogDescription || '');
+          setAllowComments(settings.allowComments !== false);
+          setEmailNotifications(settings.emailNotifications !== false);
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    
+    if (user) {
+      setAdminName(user.name || '');
+      setAdminEmail(user.email || '');
+    }
+    
+    loadSettings();
+  }, [user]);
+
+  const handlePasswordChange = async (e) => {
     e.preventDefault()
-    // Logic đổi mật khẩu
-    console.log('Đổi mật khẩu')
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('Mật khẩu mới không khớp');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await settingsService.changePassword(currentPassword, newPassword);
+      if (response.success) {
+        toast.success('Đổi mật khẩu thành công');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(response.message || 'Đổi mật khẩu thất bại');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault()
-    // Logic cập nhật profile
-    console.log('Cập nhật profile')
+    
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', adminName);
+      formData.append('email', adminEmail);
+      if (profileImage) {
+        formData.append('profileImage', profileImage);
+      }
+
+      const response = await settingsService.updateProfile(formData);
+      if (response.success) {
+        toast.success('Cập nhật thông tin thành công');
+        setProfileImage(false);
+        fetchUserProfile(); // Refresh user data
+      } else {
+        toast.error(response.message || 'Cập nhật thông tin thất bại');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const handleBlogSettings = (e) => {
+  const handleBlogSettings = async (e) => {
     e.preventDefault()
-    // Logic cập nhật cài đặt blog
-    console.log('Cập nhật cài đặt blog')
+    
+    setLoading(true);
+    try {
+      const response = await settingsService.updateBlogSettings({
+        blogTitle,
+        blogDescription,
+        allowComments,
+        emailNotifications
+      });
+      
+      if (response.success) {
+        toast.success('Cập nhật cài đặt blog thành công');
+      } else {
+        toast.error(response.message || 'Cập nhật cài đặt blog thất bại');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const handleDeleteAllComments = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa tất cả bình luận? Hành động này không thể hoàn tác!')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await commentService.deleteAllComments();
+      if (response.success) {
+        toast.success('Đã xóa tất cả bình luận');
+      } else {
+        toast.error(response.message || 'Không thể xóa bình luận');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetSettings = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn reset tất cả cài đặt về mặc định? Hành động này không thể hoàn tác!')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await settingsService.resetSettings();
+      if (response.success) {
+        toast.success('Đã reset cài đặt về mặc định');
+        // Reload settings
+        window.location.reload();
+      } else {
+        toast.error(response.message || 'Không thể reset cài đặt');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className='flex-1 p-4 md:p-10 bg-gray-50/50'>
@@ -80,9 +222,10 @@ const Setting = () => {
 
             <button 
               type='submit' 
-              className='px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors'
+              disabled={loading}
+              className='px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Cập nhật thông tin
+              {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
             </button>
           </form>
         </div>
@@ -126,9 +269,10 @@ const Setting = () => {
 
             <button 
               type='submit' 
-              className='px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors'
+              disabled={loading}
+              className='px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Đổi mật khẩu
+              {loading ? 'Đang đổi...' : 'Đổi mật khẩu'}
             </button>
           </form>
         </div>
@@ -164,6 +308,8 @@ const Setting = () => {
                 <input 
                   type="checkbox" 
                   id="allowComments"
+                  checked={allowComments}
+                  onChange={(e) => setAllowComments(e.target.checked)}
                   className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer' 
                 />
                 <label htmlFor="allowComments" className="text-sm font-medium text-gray-800">Cho phép bình luận</label>
@@ -172,38 +318,21 @@ const Setting = () => {
               <div className='flex items-center gap-3'>
                 <input 
                   type="checkbox" 
-                  id="moderateComments"
+                  id="emailNotifications"
+                  checked={emailNotifications}
+                  onChange={(e) => setEmailNotifications(e.target.checked)}
                   className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer' 
                 />
-                <label htmlFor="moderateComments" className="text-sm font-medium text-gray-800">Kiểm duyệt bình luận</label>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className='flex items-center gap-3'>
-                <input 
-                  type="checkbox" 
-                  id="enableSEO"
-                  className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer' 
-                />
-                <label htmlFor="enableSEO" className="text-sm font-medium text-gray-800">Tối ưu SEO</label>
-              </div>
-
-              <div className='flex items-center gap-3'>
-                <input 
-                  type="checkbox" 
-                  id="enableAnalytics"
-                  className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer' 
-                />
-                <label htmlFor="enableAnalytics" className="text-sm font-medium text-gray-800">Google Analytics</label>
+                <label htmlFor="emailNotifications" className="text-sm font-medium text-gray-800">Thông báo email</label>
               </div>
             </div>
 
             <button 
               type='submit' 
-              className='px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors'
+              disabled={loading}
+              className='px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Lưu cài đặt
+              {loading ? 'Đang lưu...' : 'Lưu cài đặt'}
             </button>
           </form>
         </div>
@@ -214,10 +343,18 @@ const Setting = () => {
         <h2 className="text-lg font-semibold text-red-800 mb-4">⚠️ Vùng nguy hiểm</h2>
         <p className="text-sm text-red-700 mb-4">Các hành động này không thể hoàn tác. Vui lòng thực hiện cẩn thận.</p>
         <div className="flex gap-4">
-          <button className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors'>
+          <button 
+            onClick={handleDeleteAllComments}
+            disabled={loading}
+            className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+          >
             Xóa tất cả bình luận
           </button>
-          <button className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors'>
+          <button 
+            onClick={handleResetSettings}
+            disabled={loading}
+            className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+          >
             Reset cài đặt
           </button>
         </div>

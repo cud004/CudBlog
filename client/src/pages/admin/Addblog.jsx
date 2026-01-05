@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { assets, blogCategories } from '../../assets/assets'
+import { assets } from '../../assets/assets'
 import Quill from 'quill';
+import toast from 'react-hot-toast';
+import blogService from '../../services/blogService';
+import categoryService from '../../services/categoryService';
+import tagService from '../../services/tagService';
+import { useAppContext } from '../../context/AppContext';
+
 const Addblog = () => {
+  const { navigate } = useAppContext();
   
   const editorRef = useRef(null);
   const quillRef = useRef(null);
@@ -10,8 +17,35 @@ const Addblog = () => {
   const [additionalImages, setAdditionalImages] = useState([]);
   const [title, setTitle] = useState('');
   const [subTitle, setSubTitle] = useState('');
-  const [category, setCategory] = useState('Startup');
+  const [category, setCategory] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
   const [isPublished, setIsPublished] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
+
+  // Fetch categories and tags
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriesRes, tagsRes] = await Promise.all([
+          categoryService.getAllCategories(),
+          tagService.getAllTags()
+        ]);
+        
+        if (categoriesRes.success) {
+          setCategories(categoriesRes.data);
+        }
+        if (tagsRes.success) {
+          setTags(tagsRes.data);
+        }
+      } catch (error) {
+        toast.error('Không thể tải danh mục và tags');
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleAdditionalImages = (e) => {
     const files = Array.from(e.target.files);
@@ -35,11 +69,62 @@ const Addblog = () => {
   }
 
   const generateContent = async() => {
-
+    toast.info('Tính năng AI đang được phát triển');
   }
 
   const onSubmitHandler = async(e) => {
     e.preventDefault();
+    
+    if (!image) {
+      toast.error('Vui lòng chọn hình ảnh chính');
+      return;
+    }
+    
+    if (!category) {
+      toast.error('Vui lòng chọn danh mục');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const formData = new FormData();
+      
+      // Get content from Quill editor
+      const content = quillRef.current ? quillRef.current.root.innerHTML : '';
+      
+      // Prepare blog data
+      const blogData = {
+        title,
+        subTitle,
+        description: subTitle,
+        content,
+        category,
+        tags: selectedTags,
+        isPublished
+      };
+      
+      formData.append('blog', JSON.stringify(blogData));
+      formData.append('image', image);
+      
+      // Append additional images
+      additionalImages.forEach((img) => {
+        formData.append('additionalImages', img);
+      });
+
+      const response = await blogService.createBlog(formData);
+      
+      if (response.success) {
+        toast.success('Tạo bài viết thành công!');
+        navigate('/admin/listblog');
+      } else {
+        toast.error(response.message || 'Tạo bài viết thất bại');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo bài viết');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -114,17 +199,50 @@ const Addblog = () => {
           />
          </div>
          <p className="text-sm font-semibold text-gray-800 mb-2 mt-4"> Danh mục</p>
-         <select onChange={(e) => setCategory(e.target.value)} value={category} name="category" className='mt-2 px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700'>
+         <select 
+           onChange={(e) => setCategory(e.target.value)} 
+           value={category} 
+           name="category" 
+           className='mt-2 px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700'
+           required
+         >
           <option value="">Chọn danh mục</option>
-          {blogCategories.map((item, index)=>{
-            return <option key={index} value={item}>{item}</option>
-          })}
+          {categories.map((cat) => (
+            <option key={cat._id} value={cat._id}>{cat.name}</option>
+          ))}
          </select>
+         
+         <p className="text-sm font-semibold text-gray-800 mb-2 mt-4"> Tags</p>
+         <div className='mt-2 flex flex-wrap gap-2 p-3 border border-gray-300 rounded-lg min-h-[50px]'>
+           {tags.map((tag) => (
+             <label key={tag._id} className='flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full cursor-pointer hover:bg-gray-200'>
+               <input
+                 type="checkbox"
+                 checked={selectedTags.includes(tag._id)}
+                 onChange={(e) => {
+                   if (e.target.checked) {
+                     setSelectedTags([...selectedTags, tag._id]);
+                   } else {
+                     setSelectedTags(selectedTags.filter(id => id !== tag._id));
+                   }
+                 }}
+                 className='w-4 h-4'
+               />
+               <span className='text-sm'>{tag.name}</span>
+             </label>
+           ))}
+         </div>
          <div className='flex items-center gap-3 mt-4'>
           <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer' />
           <p className="text-sm font-medium text-gray-800">Đăng ngay</p>
          </div>
-         <button type='submit' className='mt-8 w-40 h-10 bg-primary text-white rounded cursor-pointer text-sm'>Thêm bài viết</button>      </div>
+         <button 
+           type='submit' 
+           disabled={loading}
+           className='mt-8 w-40 h-10 bg-primary text-white rounded cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed'
+         >
+           {loading ? 'Đang tạo...' : 'Thêm bài viết'}
+         </button>      </div>
     </form>
   )
 }

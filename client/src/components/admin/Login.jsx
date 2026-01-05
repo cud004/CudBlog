@@ -1,28 +1,26 @@
 import React, { useState } from 'react'
 import { assets } from '../../assets/assets'
 import { useAppContext } from '../../context/AppContext';
-
 import toast from 'react-hot-toast';
 
 const Login = () => {
-  const {axios, setToken} = useAppContext();
+  const { handleLogin, navigate } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async(e) => {
-    e.preventDefault()
+    e.preventDefault();
+    setLoading(true);
     try {
-      const {data} = await axios.post("/api/admin/login", {email, password});
-      if(data.success){
-        setToken(data.token);
-        localStorage.setItem("token", data.token);
-        axios.defaults.headers.common["Authorization"] = data.token;
-      }
-      else{
-        toast.error(data.message);
+      const success = await handleLogin(email, password);
+      if (success) {
+        navigate('/admin/dashboard');
       }
     } catch (error) {
       toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
   }
   
@@ -57,6 +55,7 @@ const Login = () => {
                   value={email} 
                   type="email" 
                   required
+                  autoComplete="email"
                   placeholder='Nhập email của bạn' 
                   className='w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
                 />
@@ -72,6 +71,7 @@ const Login = () => {
                   value={password} 
                   type="password" 
                   required
+                  autoComplete="current-password"
                   placeholder='Nhập mật khẩu' 
                   className='w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
                 />
@@ -96,10 +96,11 @@ const Login = () => {
 
               {/* Submit Button */}
               <button 
-                type='submit' 
-                className='w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/80 transition-all duration-200 cursor-pointer'
+                type='submit'
+                disabled={loading}
+                className='w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/80 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                Đăng nhập
+                {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
             </form>
 

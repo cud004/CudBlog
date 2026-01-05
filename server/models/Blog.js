@@ -19,6 +19,10 @@ const blogSchema = new mongoose.Schema({
         required: [true, 'Description is required'],
         minlength: [10, 'Description must be at least 10 characters']
     },
+    content: {
+        type: String,
+        minlength: [50, 'Content must be at least 50 characters']
+    },
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',

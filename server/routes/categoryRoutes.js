@@ -27,3 +27,4 @@ categoryRouter.get('/:id', cacheMiddleware(1800), getCategoryById);
 
 export default categoryRouter;
 
+

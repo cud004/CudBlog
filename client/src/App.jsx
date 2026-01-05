@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import Blog from './pages/Blog'
 import Layout from './pages/admin/Layout'
@@ -14,17 +14,29 @@ import {Toaster} from 'react-hot-toast'
 import { useAppContext } from './context/AppContext'
 
 const App = () => {
- 
-  const {token} = useAppContext();
+  const { token } = useAppContext();
 
   return (
     <div>
       <Toaster />
       <Routes>
+        {/* Public Routes */}
         <Route path='/' element={<Home />} />
         <Route path='/blog/:id' element={<Blog />} />
-        <Route path='/admin' element={token ? <Layout/> : <Login/>}>
-          <Route index element={<Dashboard />} />
+        
+        {/* Admin Login Route */}
+        <Route 
+          path='/admin/login' 
+          element={token ? <Navigate to="/admin/dashboard" replace /> : <Login />} 
+        />
+        
+        {/* Protected Admin Routes */}
+        <Route 
+          path='/admin' 
+          element={token ? <Layout /> : <Navigate to="/admin/login" replace />}
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path='dashboard' element={<Dashboard />} />
           <Route path='listblog' element={<Listblog />} />
           <Route path='addblog' element={<Addblog />} />
           <Route path='comment' element={<Comment />} />

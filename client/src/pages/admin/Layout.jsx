@@ -1,12 +1,14 @@
 import React from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/admin/Sidebar'
+import { useAppContext } from '../../context/AppContext'
 
 const Layout = () => {
     const navigate = useNavigate()
+    const { handleLogout } = useAppContext()
 
-    const logout = () => {
-        navigate('/')
+    const logout = async () => {
+        await handleLogout()
     }
     return (
         <>

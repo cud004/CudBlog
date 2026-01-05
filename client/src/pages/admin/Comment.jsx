@@ -1,13 +1,27 @@
 import React, { useEffect, useState } from "react";
 import CommentTableItem from "../../components/admin/CommentTableItem";
-import { comments_data } from "../../assets/assets";
+import toast from 'react-hot-toast';
+import commentService from '../../services/commentService';
 
 const Comment = () => {
   const [comments, setComments] = useState([]);
-  const [filter, setFilter] = useState("Không được duyệt");
+  const [filter, setFilter] = useState("Not Approved");
+  const [loading, setLoading] = useState(false);
 
   const fetchComments = async () => {
-    setComments(comments_data);
+    setLoading(true);
+    try {
+      const response = await commentService.getAllComments();
+      if (response.success) {
+        setComments(response.data.comments || []);
+      } else {
+        toast.error(response.message || 'Không thể tải danh sách bình luận');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -36,27 +50,50 @@ const Comment = () => {
                 : "text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
           >
-            Không được duyệt
+            Chưa duyệt
           </button>
         </div>
       </div>
-      <div className="relative w-full overflow-x-auto bg-white rounded-lg shadow-lg scrollbar-hide">
-        <table className="w-full min-w-[800px] text-sm text-gray-700">
-          <thead className="text-xs text-gray-700 text-left uppercase bg-gray-50 border-b">
-            <tr>
-              <th scope="col" className="px-6 py-4 font-semibold min-w-[400px]"> Tên bài viết & Bình luận </th>
-              <th scope="col" className="px-6 py-4 font-semibold w-32 max-sm:hidden text-center"> Thời gian </th>
-              <th scope="col" className="px-6 py-4 font-semibold text-center w-40"> Hành động </th>
-            </tr>  
-          </thead>
-          <tbody>
-            {comments.filter((comment) =>{
-              if(filter === 'Approved') return comment.isApproved === true;
-              return comment.isApproved === false;
-            }).map((comment, index)=> <CommentTableItem key={comment._id} comment={comment} fetchComments={fetchComments} index={index + 1} />)}
-          </tbody>
-        </table>
-      </div>
+      
+      {loading ? (
+        <div className='flex justify-center items-center h-64'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary'></div>
+        </div>
+      ) : (
+        <div className="relative w-full overflow-x-auto bg-white rounded-lg shadow-lg scrollbar-hide">
+          {comments.filter((comment) => {
+            if (filter === 'Approved') return comment.isApproved === true;
+            return comment.isApproved === false;
+          }).length === 0 ? (
+            <div className='text-center py-10 text-gray-500'>
+              {filter === 'Approved' ? 'Chưa có bình luận đã duyệt' : 'Chưa có bình luận chờ duyệt'}
+            </div>
+          ) : (
+            <table className="w-full min-w-[800px] text-sm text-gray-700">
+              <thead className="text-xs text-gray-700 text-left uppercase bg-gray-50 border-b">
+                <tr>
+                  <th scope="col" className="px-6 py-4 font-semibold min-w-[400px]"> Tên bài viết & Bình luận </th>
+                  <th scope="col" className="px-6 py-4 font-semibold w-32 max-sm:hidden text-center"> Thời gian </th>
+                  <th scope="col" className="px-6 py-4 font-semibold text-center w-40"> Hành động </th>
+                </tr>  
+              </thead>
+              <tbody>
+                {comments.filter((comment) => {
+                  if (filter === 'Approved') return comment.isApproved === true;
+                  return comment.isApproved === false;
+                }).map((comment, index) => (
+                  <CommentTableItem 
+                    key={comment._id} 
+                    comment={comment} 
+                    fetchComments={fetchComments} 
+                    index={index + 1} 
+                  />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };

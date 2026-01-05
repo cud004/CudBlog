@@ -4,11 +4,28 @@ import Category from '../models/Category.js';
 import Tag from '../models/Tag.js';
 import { NotFoundError, ValidationError } from '../utils/errorHandler.js';
 import { cacheDelPattern } from '../configs/redis.js';
+import mongoose from 'mongoose';
 
 class BlogService {
     // Create new blog
     async createBlog(blogData, authorId) {
-        const { title, subTitle, description, category, tags, image, additionalImages, isPublished } = blogData;
+        const { title, subTitle, description, content, category, tags, image, additionalImages, isPublished } = blogData;
+
+        // Validate ObjectId format for category
+        if (!category) {
+            throw new ValidationError('Category is required');
+        }
+        if (!mongoose.Types.ObjectId.isValid(category)) {
+            throw new ValidationError(`Invalid category ID format: "${category}". Must be a valid MongoDB ObjectId.`);
+        }
+
+        // Validate ObjectId format for tags
+        if (tags && tags.length > 0) {
+            const invalidTags = tags.filter(tag => !mongoose.Types.ObjectId.isValid(tag));
+            if (invalidTags.length > 0) {
+                throw new ValidationError(`Invalid tag ID format: ${invalidTags.join(', ')}. Must be valid MongoDB ObjectIds.`);
+            }
+        }
 
         // Verify category exists
         const categoryExists = await Category.findById(category);
@@ -28,6 +45,7 @@ class BlogService {
             title,
             subTitle,
             description,
+            content,
             category,
             tags: tags || [],
             image,
@@ -141,10 +159,10 @@ class BlogService {
             throw new NotFoundError('Blog not found');
         }
 
-        // Increment view count
+        // Increment view count without triggering validation
         if (incrementView && blog.isPublished) {
-            blog.views += 1;
-            await blog.save();
+            await Blog.findByIdAndUpdate(blogId, { $inc: { views: 1 } });
+            blog.views += 1; // Update local object for consistency
         }
 
         return blog;

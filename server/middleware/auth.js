@@ -13,7 +13,7 @@ export const auth = async (req, res, next) => {
         } else if (req.headers.authorization) {
             token = req.headers.authorization;
         }
-
+        
         if (!token) {
             throw new AuthenticationError('Please login to access this resource');
         }
